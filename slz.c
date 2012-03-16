@@ -70,7 +70,7 @@ void slz_put_bytes(slz_sink_t *sink, size_t len, char *data)
       case SLZ_SINK_FILE: (void) 0;
         FILE *f = sink->sink.file;
         size_t written = fwrite(data, len, 1, f);
-        if (written < len) {
+        if (written != len) {
             /* Error! */
             if (!ferror(f))
                 sink->err.state = SLZ_UNKNOWN_ERROR;
