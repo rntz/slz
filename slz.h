@@ -28,7 +28,7 @@ struct slz_err {
 };
 
 struct slz_src {
-    enum { SLZ_SRC_NONE, SLZ_SRC_FILE } type;
+    enum { SLZ_SRC_FILE } type;
     slz_err_t err;
     union {
         FILE *file;
@@ -36,7 +36,7 @@ struct slz_src {
 };
 
 struct slz_sink {
-    enum { SLZ_SINK_NONE, SLZ_SINK_FILE } type;
+    enum { SLZ_SINK_FILE } type;
     slz_err_t err;
     union {
         FILE *file;
@@ -89,29 +89,29 @@ void slz_sink_from_file(slz_sink_t *sink, FILE *file);
 /* Serialization. */
 void slz_put_bytes(slz_sink_t *sink, size_t len, char *data);
 
-void slz_put_bool(slz_sink_t *sink, bool val);
-void slz_put_uint8(slz_sink_t *sink, uint8_t val);
-void slz_put_int8(slz_sink_t *sink, int8_t val);
+void slz_put_bool  (slz_sink_t *sink,     bool val);
+void slz_put_uint8 (slz_sink_t *sink,  uint8_t val);
+void slz_put_int8  (slz_sink_t *sink,   int8_t val);
 void slz_put_uint16(slz_sink_t *sink, uint16_t val);
-void slz_put_int16(slz_sink_t *sink, int16_t val);
+void slz_put_int16 (slz_sink_t *sink,  int16_t val);
 void slz_put_uint32(slz_sink_t *sink, uint32_t val);
-void slz_put_int32(slz_sink_t *sink, int32_t val);
+void slz_put_int32 (slz_sink_t *sink,  int32_t val);
 void slz_put_uint64(slz_sink_t *sink, uint64_t val);
-void slz_put_int64(slz_sink_t *sink, int64_t val);
+void slz_put_int64 (slz_sink_t *sink,  int64_t val);
 
 
 /* Deserialization. */
 void slz_get_bytes(slz_src_t *src, size_t len, char *out);
 
-void slz_get_bool(slz_src_t *src, bool *out);
-void slz_get_uint8(slz_src_t *src, uint8_t *out);
-void slz_get_int8(slz_src_t *src, int8_t *out);
-void slz_get_uint16(slz_src_t *src, uint16_t *out);
-void slz_get_int16(slz_src_t *src, int16_t *out);
-void slz_get_uint32(slz_src_t *src, uint32_t *out);
-void slz_get_int32(slz_src_t *src, int32_t *out);
-void slz_get_uint64(slz_src_t *src, uint64_t *out);
-void slz_get_int64(slz_src_t *src, int64_t *out);
+    bool slz_get_bool  (slz_src_t *src);
+ uint8_t slz_get_uint8 (slz_src_t *src);
+  int8_t slz_get_int8  (slz_src_t *src);
+uint16_t slz_get_uint16(slz_src_t *src);
+ int16_t slz_get_int16 (slz_src_t *src);
+uint32_t slz_get_uint32(slz_src_t *src);
+ int32_t slz_get_int32 (slz_src_t *src);
+uint64_t slz_get_uint64(slz_src_t *src);
+ int64_t slz_get_int64 (slz_src_t *src);
 
 /* /\* Reads a C string of arbitrary length, allocating a buffer for it using
  *  * malloc() and putting it in `*out'. *\/
