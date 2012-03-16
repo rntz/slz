@@ -89,6 +89,7 @@ void slz_put_bytes(slz_sink_t *sink, size_t len, char *data)
 
 void slz_put_bool(slz_sink_t *sink, bool val)
 {
+    /* TODO: read C spec. is this really OK? */
     char byte = val ? 1 : 0;
     slz_put_bytes(sink, 1, &byte);
 }
@@ -107,7 +108,7 @@ void slz_put_int8(slz_sink_t *sink, int8_t val)
 
 void slz_put_uint16(slz_sink_t *sink, uint16_t val)
 {
-    /* big-endian. */
+    /* NB. big-endian. */
     char bytes[] = { val >> 8, val % 256 };
     slz_put_bytes(sink, 2, bytes);
 }
@@ -120,6 +121,7 @@ void slz_put_int16(slz_sink_t *sink, int16_t val)
 
 void slz_put_uint32(slz_sink_t *sink, uint32_t val)
 {
+    /* NB. big-endian. */
     char bytes[] = {val >> 24, (val >> 16) % 256, (val >> 8) % 256, val % 256};
     slz_put_bytes(sink, sizeof bytes, bytes);
 }
@@ -132,6 +134,7 @@ void slz_put_int32(slz_sink_t *sink, int32_t val)
 
 void slz_put_uint64(slz_sink_t *sink, uint64_t val)
 {
+    /* NB. big-endian. */
     slz_put_uint32(sink, val >> 32);
     slz_put_uint32(sink, val % (((uint64_t)1) << 32));
 }
