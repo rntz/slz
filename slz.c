@@ -3,7 +3,6 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
-#include <setjmp.h>
 
 /* Useful internal helpers */
 static void slz_init_err(slz_err_t *err)
