@@ -8,12 +8,12 @@ LIBS=srlz.a
 all: $(LIBS)
 
 SRLZ_SRCS=srlz
-rvmi: $(addsuffix .o, $(RVMI_SRCS))
+srlz.a: $(addsuffix .o, $(SRLZ_SRCS))
 
 # Pattern rules
 %.o: %.c flags
 	@echo "  CC	$<"
-ifdef VERBOSE
+ifndef VERBOSE
 	@$(CC) $(CFLAGS) -c $< -o $@
 else
 	$(CC) $(CFLAGS) -c $< -o $@
@@ -21,11 +21,11 @@ endif
 
 $(LIBS): %.a:
 	@echo "  AR	$^"
-	@rm $@
-ifdef VERBOSE
-	@$(AR) "rcDs$(ARFLAGS)" $@ $^
+	@rm -f $@
+ifndef VERBOSE
+	@$(AR) rcD $@ $^
 else
-	$(AR) "rcDs$(ARFLAGS)" $@ $^
+	$(AR) rcD $@ $^
 endif
 
 # Other miscellaneous rules

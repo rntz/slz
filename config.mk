@@ -4,7 +4,6 @@ CCLD=$(CC)
 AR=ar
 CFLAGS+= -std=c99 -Wall -Wextra -Werror -pipe
 LDFLAGS+=
-ARFLAGS+=
 
 CFLAGS_DEBUG= -O0 -ggdb3
 CFLAGS_RELEASE= -O3 -fomit-frame-pointer -DNDEBUG -DRVM_RELEASE
