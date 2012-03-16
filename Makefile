@@ -4,11 +4,11 @@ FORCE:
 
 include config.mk
 
-LIBS=srlz.a
+LIBS=slz.a
 all: $(LIBS)
 
-SRLZ_SRCS=srlz
-srlz.a: $(addsuffix .o, $(SRLZ_SRCS))
+SLZ_SRCS=slz
+slz.a: $(addsuffix .o, $(SLZ_SRCS))
 
 # Pattern rules
 %.o: %.c flags
