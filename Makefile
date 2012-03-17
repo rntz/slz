@@ -20,7 +20,7 @@ else
 endif
 
 $(LIBS): %.a:
-	@echo "  AR	$^"
+	@echo "  AR	$@"
 	@rm -f $@
 ifndef VERBOSE
 	@$(AR) rcD $@ $^
