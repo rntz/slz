@@ -104,6 +104,7 @@ void slz_src_from_file(slz_ctx_t *ctx, slz_src_t *src, FILE *file)
     src->type = SLZ_SRC_FILE;
     src->error = false;
     src->src.file = file;
+    /* FIXME: read & check magic number */
 }
 
 void slz_sink_from_file(slz_ctx_t *ctx, slz_sink_t *sink, FILE *file)
@@ -114,6 +115,7 @@ void slz_sink_from_file(slz_ctx_t *ctx, slz_sink_t *sink, FILE *file)
     sink->type = SLZ_SINK_FILE;
     sink->error = false;
     sink->sink.file = file;
+    /* FIXME: write magic number */
 }
 
 
