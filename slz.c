@@ -1,13 +1,25 @@
 #include "slz.h"
 
 #include <errno.h>
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
+
+/* The magic bytes (not including version identifier) that we expect at the
+ * beginning of a slz value.
+ *
+ * Don't change this, ever.
+ */
+static const char magic[] = "slz-";
+
+#define S(x) #x
+static const char version_string[] =
+    (S(SLZ_VERSION_MAJOR) "." S(SLZ_VERSION_MINOR) "." S(SLZ_VERSION_BUGFIX));
 
 /* Useful internal helpers */
 #define IMPOSSIBLE do { assert(0); abort(); } while (0)
 
-static void slz_raise(slz_ctx_t *ctx)
+static void slz_reraise(slz_ctx_t *ctx)
 {
     assert (slz_error(ctx));
     if (ctx->have_env) {
@@ -20,12 +32,29 @@ static void slz_raise(slz_ctx_t *ctx)
     }
 }
 
+static void slz_raise(slz_ctx_t *ctx, slz_origin_t origin_type, void *origin)
+{
+    ctx->origin_type = (uint8_t) origin_type;
+    switch (origin_type) {
+      case SLZ_SRC: ctx->origin.src = (slz_src_t*) origin; break;
+      case SLZ_SINK: ctx->origin.sink = (slz_sink_t*) origin; break;
+    }
+    slz_reraise(ctx);
+}
+
 static void perrorish(const char *s, const char *errdesc)
 {
     if (s) fprintf(stderr, "%s: ", s);
     fprintf(stderr, "%s\n", errdesc);
     fflush(stderr);
 }
+
+/* Some forward declarations. */
+static bool try_expect_bytes(
+    slz_ctx_t *ctx, slz_src_t *src, size_t len, const char *data);
+
+static bool try_get_bytes(
+    slz_ctx_t *ctx, slz_src_t *src, size_t len, char *out);
 
 
 /* Miscellany. */
@@ -70,18 +99,23 @@ void slz_perror(slz_ctx_t *ctx, const char *s)
         perror(s);
         break;
 
+      case SLZ_BAD_HEADER:
+        assert (ctx->origin_type == SLZ_SRC);
+        perrorish(s, "libslz: bad magic number or malformed header");
+        break;
+
       case SLZ_VERSION_MISMATCH:
         assert (ctx->origin_type == SLZ_SRC);
         perrorish(s, "libslz: version mismatch when deserializing");
         break;
 
-      case SLZ_BAD_MAGIC_NUMBER:
-        assert (ctx->origin_type == SLZ_SRC);
-        perrorish(s, "libslz: bad magic number when deserializing");
-        break;
-
       case SLZ_UNKNOWN_ERROR:
         perrorish(s, "libslz: Unknown I/O error! :(");
+        break;
+
+      case SLZ_UNFULFILLED_EXPECTATIONS:
+        /* TODO: better error message */
+        perrorish(s, "libslz: unexpected value");
         break;
 
       case SLZ_NO_ERROR: IMPOSSIBLE;
@@ -96,6 +130,49 @@ void slz_end_catch(slz_ctx_t *ctx)
 
 
 /* Source & sink initialization. */
+static inline bool get_version_frag(
+    slz_ctx_t *ctx, slz_src_t *src, uint16_t *nump, char *cp)
+{
+    assert (*nump == 0);
+    for (;;) {
+        if (!try_get_bytes(ctx, src, 1, cp))
+            return false;
+        if (*cp < '0' || '9' < *cp)
+            return true;
+        *nump = *nump * 10 + (*cp - '0');
+    }
+}
+
+static inline bool okay_version_number(
+     uint16_t major, uint16_t minor, uint16_t bugfix)
+{
+    /* TODO: be more relaxed about this */
+    return (major == SLZ_VERSION_MAJOR &&
+            minor == SLZ_VERSION_MINOR &&
+            bugfix == SLZ_VERSION_BUGFIX);
+}
+
+static void expect_header(slz_ctx_t *ctx, slz_src_t *src)
+{
+    char c;
+    uint16_t major = 0, minor = 0, bugfix = 0;
+    if (!(try_expect_bytes(ctx, src, sizeof magic, magic) &&
+          get_version_frag(ctx, src, &major, &c) && c == '.' &&
+          get_version_frag(ctx, src, &minor, &c) && c == '.' &&
+          get_version_frag(ctx, src, &bugfix, &c) && c == '\0')) {
+        ctx->state = SLZ_BAD_HEADER;
+        slz_raise(ctx, SLZ_SRC, src);
+    }
+
+    /* Check version number is the one we expect. */
+    if (!okay_version_number(major, minor, bugfix)) {
+        ctx->state = SLZ_VERSION_MISMATCH;
+        ctx->info.version = ((slz_version_t) {
+                .major = major, .minor = minor, .bugfix = bugfix });
+        slz_raise(ctx, SLZ_SRC, src);
+    }
+}
+
 void slz_src_from_file(slz_ctx_t *ctx, slz_src_t *src, FILE *file)
 {
     /* TODO: check that file is open for reading. */
@@ -104,23 +181,38 @@ void slz_src_from_file(slz_ctx_t *ctx, slz_src_t *src, FILE *file)
     src->type = SLZ_SRC_FILE;
     src->error = false;
     src->src.file = file;
-    /* FIXME: read & check magic number */
+    expect_header(ctx, src);
+}
+
+static inline size_t asciilen(uint16_t num)
+{
+    size_t r = 1;
+    while (num >= 10) num /= 10, ++r;
+    return r;
+}
+
+static void slz_put_header(slz_ctx_t *ctx, slz_sink_t *sink)
+{
+    /* Write magic number & version info. */
+    slz_put_bytes(ctx, sink, sizeof magic, magic);
+    /* + 1 to include the terminating null byte. */
+    slz_put_bytes(ctx, sink, sizeof version_string + 1, version_string);
 }
 
 void slz_sink_from_file(slz_ctx_t *ctx, slz_sink_t *sink, FILE *file)
 {
     /* TODO: check that file is open for writing */
     /* FIXME: check file for error conditions */
-    (void) ctx;
     sink->type = SLZ_SINK_FILE;
     sink->error = false;
     sink->sink.file = file;
-    /* FIXME: write magic number */
+    slz_put_header(ctx, sink);
 }
 
 
 /* Serialization */
-void slz_put_bytes(slz_ctx_t *ctx, slz_sink_t *sink, size_t len, char *data)
+void slz_put_bytes(
+    slz_ctx_t *ctx, slz_sink_t *sink, size_t len, const char *data)
 {
     assert (!slz_error(ctx));
     switch ((slz_sink_type_t) sink->type) {
@@ -129,15 +221,13 @@ void slz_put_bytes(slz_ctx_t *ctx, slz_sink_t *sink, size_t len, char *data)
         size_t written = fwrite(data, 1, len, f);
         if (written != len) {
             /* Error! */
-            ctx->origin_type = SLZ_SINK;
-            ctx->origin.sink = sink;
             if (ferror(f)) {
                 ctx->state = SLZ_ERRNO;
                 ctx->info.saved_errno = errno;
             }
             else
                 ctx->state = SLZ_UNKNOWN_ERROR;
-            slz_raise(ctx);
+            slz_raise(ctx, SLZ_SINK, sink);
         }
         break;
     }
@@ -203,7 +293,8 @@ void slz_put_int64(slz_ctx_t *ctx, slz_sink_t *sink, int64_t val)
 
 
 /* Deserialization. */
-void slz_get_bytes(slz_ctx_t *ctx, slz_src_t *src, size_t len, char *out)
+static bool try_get_bytes(
+    slz_ctx_t *ctx, slz_src_t *src, size_t len, char *out)
 {
     assert (!slz_error(ctx));
     switch ((slz_src_type_t) src->type) {
@@ -220,10 +311,44 @@ void slz_get_bytes(slz_ctx_t *ctx, slz_src_t *src, size_t len, char *out)
             }
             else
                 ctx->state = SLZ_UNKNOWN_ERROR;
-            slz_raise(ctx);
+            return false;
         }
         break;
     }
+    return true;
+}
+
+static bool try_expect_bytes(
+    slz_ctx_t *ctx, slz_src_t *src, size_t len, const char *data)
+{
+    /* TODO: for large values of len, this is probably a bad idea. */
+    char buf[len];
+    if (!try_get_bytes(ctx, src, len, buf))
+        return false;           /* couldn't read enough data */
+    if (!memcmp(data, buf, len))
+        return true;            /* all is well */
+    /* data not as expected */
+    ctx->origin_type = SLZ_SRC;
+    ctx->origin.src = src;
+    ctx->state = SLZ_UNFULFILLED_EXPECTATIONS;
+    return false;
+}
+
+void slz_get_bytes(slz_ctx_t *ctx, slz_src_t *src, size_t len, char *out)
+{
+    if (!try_get_bytes(ctx, src, len, out))
+        slz_reraise(ctx);
+}
+
+void slz_expect_bytes(
+    slz_ctx_t *ctx, slz_src_t *src, size_t len, const char *data,
+    void *user_info)
+{
+    if (try_expect_bytes(ctx, src, len, data))
+        return;
+    ctx->state = SLZ_UNFULFILLED_EXPECTATIONS;
+    ctx->info.user_info = user_info;
+    slz_reraise(ctx);
 }
 
 /* TODO: many of these functions are dubiously portable. */

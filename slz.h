@@ -58,8 +58,9 @@ typedef enum {
     SLZ_NO_ERROR,
     SLZ_UNKNOWN_ERROR,
     SLZ_ERRNO,
+    SLZ_BAD_HEADER,
     SLZ_VERSION_MISMATCH,
-    SLZ_BAD_MAGIC_NUMBER,
+    SLZ_UNFULFILLED_EXPECTATIONS,
 } slz_state_t;
 
 typedef enum { SLZ_SRC, SLZ_SINK } slz_origin_t;
@@ -72,6 +73,7 @@ struct slz_ctx {
     union {
         int saved_errno;
         slz_version_t version;
+        void *user_info;
     } info;
     union {
         slz_src_t *src;
@@ -143,7 +145,8 @@ void slz_sink_from_file(slz_ctx_t *ctx, slz_sink_t *sink, FILE *file);
 
 
 /* Serialization. */
-void slz_put_bytes(slz_ctx_t *ctx, slz_sink_t *sink, size_t len, char *data);
+void slz_put_bytes(
+    slz_ctx_t *ctx, slz_sink_t *sink, size_t len, const char *data);
 
 void slz_put_bool  (slz_ctx_t *ctx, slz_sink_t *sink,     bool val);
 void slz_put_uint8 (slz_ctx_t *ctx, slz_sink_t *sink,  uint8_t val);
@@ -158,6 +161,11 @@ void slz_put_int64 (slz_ctx_t *ctx, slz_sink_t *sink,  int64_t val);
 
 /* Deserialization. */
 void slz_get_bytes(slz_ctx_t *ctx, slz_src_t *src, size_t len, char *out);
+
+void slz_expect_bytes(
+    slz_ctx_t *ctx, slz_src_t *src, size_t len, const char *data,
+    /* user_info is put in ctx->info.user_info on error. */
+    void *user_info);
 
     bool slz_get_bool  (slz_ctx_t *ctx, slz_src_t *src);
  uint8_t slz_get_uint8 (slz_ctx_t *ctx, slz_src_t *src);
