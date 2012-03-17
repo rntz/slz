@@ -1,13 +1,13 @@
 HEADERS=slz.h
 SOURCES=slz.c
-LIBS=slz.a
+LIBS=libslz.a
 EXAMPLES=$(addprefix examples/,put get)
 EXES=$(EXAMPLES)
 BUILD_FILES=Makefile config.mk depclean
 TAR_FILES=$(BUILD_FILES) $(SOURCES) $(HEADERS) $(addsuffix .c, $(EXAMPLES))
 
 # slz.a is default target.
-slz.a: $(SOURCES:.c=.o)
+libslz.a: $(SOURCES:.c=.o)
 
 include config.mk
 
@@ -19,7 +19,7 @@ slz.tar.bz2: $(TAR_FILES)
 # Examples.
 .PHONY: examples
 examples: $(EXAMPLES)
-$(EXAMPLES): %: %.o slz.a
+$(EXAMPLES): %: %.o $(LIBS)
 # Examples need `#include <slz.h>' to work
 $(EXAMPLES): CFLAGS+=-I./
 
@@ -67,7 +67,7 @@ new_flags:
 	@echo CCLD="$(CCLD)" >> $@
 	@echo LDFLAGS="$(LDFLAGS)" >> $@
 	@echo AR="$(AR)" >> $@
-	@md5sum Makefile config.mk >> $@
+	@md5sum Makefile >> $@
 
 
 # Installation
@@ -82,7 +82,7 @@ install: $(LIBS) $(HEADERS)
 uninstall:
 	@echo "   UNINSTALL"
 	rm -f $(addprefix $(LIB)/,$(LIBS))
-	rm -f $(addprefix $(INCLUDE),$(HEADERS))
+	rm -f $(addprefix $(INCLUDE)/,$(HEADERS))
 
 
 # Cleaning stuff.
@@ -114,7 +114,7 @@ $(shell find . -name '*.dep' -empty -print0 | xargs -0 rm -f)
 CFILES=$(shell find . -name '*.c')
 
 # Only include dep files in certain circumstances.
-NODEP_RULES=$(CLEAN_RULES) slz.tar.%
+NODEP_RULES=$(CLEAN_RULES) slz.tar.% uninstall
 
 ifneq (,$(filter-out $(NODEP_RULES), $(MAKECMDGOALS)))
 include $(CFILES:.c=.dep)
