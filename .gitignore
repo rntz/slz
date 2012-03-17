@@ -2,3 +2,5 @@
 *.a
 *.o
 *.dep
+/examples/get
+/examples/put

@@ -1,15 +1,26 @@
-.PHONY: all FORCE
+# Configure variables
+CFLAGS+=-I./
+
+# Force all to be the default target.
+.PHONY: all
 all:
-FORCE:
 
 include config.mk
 
+# Targets needing explicit dependencies.
 LIBS=slz.a
+EXAMPLES=$(addprefix examples/,put get)
+EXES=$(EXAMPLES)
+
 all: $(LIBS)
+slz.a: slz.o
+examples/put: examples/put.o slz.a
+examples/get: examples/get.o slz.a
 
-SLZ_SRCS=slz
-slz.a: $(addsuffix .o, $(SLZ_SRCS))
+.PHONY: examples
+examples: $(EXAMPLES)
 
+
 # Pattern rules
 %.o: %.c flags
 	@echo "  CC	$<"
@@ -28,6 +39,14 @@ else
 	$(AR) rcD $@ $^
 endif
 
+$(EXES): %:
+	@echo "  LD	$@"
+ifndef VERBOSE
+	@$(CCLD) $(LDFLAGS) -o $@ $^
+else
+	$(CCLD) $(LDFLAGS) -o $@ $^
+endif
+
 
 # Other miscellaneous rules
 .PHONY: remake
@@ -35,6 +54,9 @@ remake: clean
 	make all
 
 # Used to force recompile if we change flags or makefiles.
+.PHONY: FORCE
+FORCE:
+
 flags: new_flags FORCE
 	@echo "  FLAGS"
 	@{ test -f $@ && diff -q $@ $< >/dev/null; } || \
@@ -47,7 +69,6 @@ new_flags:
 	@echo CCLD="$(CCLD)" >> $@
 	@echo LDFLAGS="$(LDFLAGS)" >> $@
 	@echo AR="$(AR)" >> $@
-	@echo ARFLAGS="$(ARFLAGS)" >> $@
 	@md5sum Makefile config.mk >> $@
 
 
@@ -75,7 +96,7 @@ depclean:
 	./depclean
 
 clean:
-	rm -f $(LIBS) *.o
+	rm -f $(LIBS) $(EXES) *.o
 
 pristine: clean depclean
 	rm -f flags new_flags
@@ -91,7 +112,8 @@ $(shell find . -name '*.dep' -empty -print0 | xargs -0 rm -f)
 	@set -e; $(CC) -MM -MT $< $(filter-out -pedantic,$(CFLAGS)) $< |\
 	sed 's,\($*\)\.c *:,\1.o $@ :,' > $@
 
-CFILES=$(shell find . -name '*.c')
+#CFILES=$(shell find . -name '*.c')
+CFILES=slz.c
 
 # Only include dep files if not cleaning.
 ifneq (,$(filter-out depclean clean pristine, $(MAKECMDGOALS)))
