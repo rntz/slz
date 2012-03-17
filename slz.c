@@ -404,5 +404,3 @@ uint64_t slz_get_uint64(slz_ctx_t *ctx, slz_src_t *src)
 int64_t slz_get_int64(slz_ctx_t *ctx, slz_src_t *src) {
     return (int64_t) slz_get_uint64(ctx, src);
 }
-
-
