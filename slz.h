@@ -7,9 +7,13 @@
 #include <stdint.h>
 #include <stdio.h>
 
-/* NB. The rest of this comment is a collection of lies, serving as an extended
- * TODO. Currently, if the version of the library and the encoded value do not
- * match, an error occurs. (YAGNI.)
+/* ---------- ON VERSION NUMBERS ----------
+ *
+ * To change version numbers, edit the Makefile.
+ *
+ * NB. The remainder of this comment is a collection of LIES. It serves as an
+ * extended TODO. At present, if the version of the library and the encoded
+ * value do not match, an error is raised. (YAGNI.)
  *
  * TODO:
  *
@@ -31,10 +35,6 @@
  * See slz_src_from_file and slz_sink_from_file for information about how errors
  * are signalled.
  */
-
-#define SLZ_VERSION_MAJOR  0
-#define SLZ_VERSION_MINOR  0
-#define SLZ_VERSION_BUGFIX 0
 
 typedef struct { uint16_t major, minor, bugfix; } slz_version_t;
 

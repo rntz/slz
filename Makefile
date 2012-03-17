@@ -6,6 +6,16 @@ EXES=$(EXAMPLES)
 BUILD_FILES=Makefile config.mk depclean
 TAR_FILES=$(BUILD_FILES) $(SOURCES) $(HEADERS) $(addsuffix .c, $(EXAMPLES))
 
+# Version info.
+# see slz.h for info on how our versioning works.
+VERSION_MAJOR=0
+VERSION_MINOR=0
+VERSION_BUGFIX=0
+
+CFLAGS+=-DSLZ_VERSION_MAJOR=$(VERSION_MAJOR) \
+	-DSLZ_VERSION_MINOR=$(VERSION_MINOR) \
+	-DSLZ_VERSION_BUGFIX=$(VERSION_BUGFIX)
+
 # libslz.a is default target.
 libslz.a: $(SOURCES:.c=.o)
 
