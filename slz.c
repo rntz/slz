@@ -13,7 +13,7 @@
 static const char magic[] = "slz-";
 
 #define S(x) #x
-#define ID(x) x
+#define ID(x) x          /* this is here to make emacs' auto indentation work */
 static const char version_string[] =
     ID(S(SLZ_VERSION_MAJOR) "." S(SLZ_VERSION_MINOR) "." S(SLZ_VERSION_BUGFIX));
 
