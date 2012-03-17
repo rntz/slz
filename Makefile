@@ -6,13 +6,12 @@ EXES=$(EXAMPLES)
 BUILD_FILES=Makefile config.mk depclean
 TAR_FILES=$(BUILD_FILES) $(SOURCES) $(HEADERS) $(addsuffix .c, $(EXAMPLES))
 
-# slz.a is default target.
+# libslz.a is default target.
 libslz.a: $(SOURCES:.c=.o)
 
 include config.mk
 
 # Tarballs.
-slz.tar: $(TAR_FILES)
 slz.tar.gz: $(TAR_FILES)
 slz.tar.bz2: $(TAR_FILES)
 
@@ -47,11 +46,6 @@ $(EXES): %:
 	tar cjf $@ $^
 
 
-# Other miscellaneous rules
-.PHONY: remake
-remake: clean
-	make
-
 # Used to force recompile if we change flags or makefiles.
 .PHONY: FORCE
 FORCE:
@@ -95,7 +89,7 @@ nodeps:
 clean:
 	@echo "   CLEAN"
 	find . -name '*.o' -delete
-	rm -f $(LIBS) $(EXES) *.tar.gz *.tar.bz2
+	rm -f $(LIBS) $(EXES) slz.tar.*
 
 pristine: clean nodeps
 	rm -f flags new_flags
