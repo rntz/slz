@@ -1,5 +1,8 @@
-# Variables affecting installation.
-PREFIX=/usr/local
+# Directories to install to
+ROOT=
+PREFIX=$(ROOT)/usr/local
+LIB=$(PREFIX)/lib
+INCLUDE=$(PREFIX)/include
 
 # Variables affecting compilation.
 CC=gcc

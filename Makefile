@@ -51,6 +51,23 @@ new_flags:
 	@md5sum Makefile config.mk >> $@
 
 
+# Installation
+.PHONY: install uninstall
+
+# header files to install
+HEADERS=slz.h
+
+install: $(LIBS) $(HEADERS)
+	@echo "  INSTALL"
+	install -m 644 $(LIBS) $(LIB)/
+	install -m 644 $(HEADERS) $(INCLUDE)/
+
+uninstall:
+	@echo "  UNINSTALL"
+	rm -f $(addprefix $(LIB)/,$(LIBS))
+	rm -f $(addprefix $(INCLUDE),$(HEADERS))
+
+
 # Cleaning stuff.
 .PHONY: depclean clean pristine
 
