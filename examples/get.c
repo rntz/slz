@@ -14,17 +14,21 @@ void *xmalloc(size_t size)
 
 int main(int argc, char **argv)
 {
-    if (argc < 2) {
-        printf("usage: %s FILE\n", argv[0]);
+    if (argc < 1) {        /* never happens */
+        printf("usage: %s < FILE\n"
+               "       %s FILE\n\n", argv[0], argv[0]);
+        printf("  Deserializes an array of strings from FILE.\n");
         exit(EXIT_FAILURE);
     }
 
     char *progname = argv[0];
-    char *filename = argv[1];
-    FILE *f = fopen(filename, "r");
-    if (!f) {
-        perror("fopen");
-        exit(EXIT_FAILURE);
+    FILE *f = stdin;
+    if (argc > 1) {
+        f = fopen(argv[1], "r");
+        if (!f) {
+            perror("fopen");
+            exit(EXIT_FAILURE);
+        }
     }
 
     slz_ctx_t ctx;
