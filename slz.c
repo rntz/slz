@@ -13,8 +13,9 @@
 static const char magic[] = "slz-";
 
 #define S(x) #x
+#define ID(x) x
 static const char version_string[] =
-    S(SLZ_VERSION_MAJOR) "." S(SLZ_VERSION_MINOR) "." S(SLZ_VERSION_BUGFIX);
+    ID(S(SLZ_VERSION_MAJOR) "." S(SLZ_VERSION_MINOR) "." S(SLZ_VERSION_BUGFIX));
 
 /* Useful internal helpers */
 #define IMPOSSIBLE do { assert(0); abort(); } while (0)
