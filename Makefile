@@ -96,7 +96,8 @@ depclean:
 	./depclean
 
 clean:
-	rm -f $(LIBS) $(EXES) *.o
+	find . -name '*.o' -delete
+	rm -f $(LIBS) $(EXES)
 
 pristine: clean depclean
 	rm -f flags new_flags
