@@ -4,3 +4,4 @@
 *.dep
 /examples/get
 /examples/put
+/slz.tar.*

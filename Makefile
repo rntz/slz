@@ -1,64 +1,62 @@
-# Configure variables
-CFLAGS+=-I./
-
-# Force all to be the default target.
-.PHONY: all
-all:
-
-include config.mk
-
-# Targets needing explicit dependencies.
+HEADERS=slz.h
+SOURCES=slz.c
 LIBS=slz.a
 EXAMPLES=$(addprefix examples/,put get)
 EXES=$(EXAMPLES)
+BUILD_FILES=Makefile config.mk depclean
+TAR_FILES=$(BUILD_FILES) $(SOURCES) $(HEADERS) $(addsuffix .c, $(EXAMPLES))
 
-all: $(LIBS)
-slz.a: slz.o
-examples/put: examples/put.o slz.a
-examples/get: examples/get.o slz.a
+# slz.a is default target.
+slz.a: $(SOURCES:.c=.o)
 
+include config.mk
+
+# Tarballs.
+slz.tar: $(TAR_FILES)
+slz.tar.gz: $(TAR_FILES)
+slz.tar.bz2: $(TAR_FILES)
+
+# Examples.
 .PHONY: examples
 examples: $(EXAMPLES)
+$(EXAMPLES): %: %.o slz.a
+# Examples need `#include <slz.h>' to work
+$(EXAMPLES): CFLAGS+=-I./
 
 
 # Pattern rules
 %.o: %.c flags
-	@echo "  CC	$<"
-ifndef VERBOSE
-	@$(CC) $(CFLAGS) -c $< -o $@
-else
+	@echo "   CC	$<"
 	$(CC) $(CFLAGS) -c $< -o $@
-endif
 
 $(LIBS): %.a:
-	@echo "  AR	$@"
-	@rm -f $@
-ifndef VERBOSE
-	@$(AR) rcD $@ $^
-else
+	@echo "   AR	$@"
+	rm -f $@
 	$(AR) rcD $@ $^
-endif
 
 $(EXES): %:
-	@echo "  LD	$@"
-ifndef VERBOSE
-	@$(CCLD) $(LDFLAGS) -o $@ $^
-else
+	@echo "   LD	$@"
 	$(CCLD) $(LDFLAGS) -o $@ $^
-endif
+
+%.tar.gz:
+	@echo "   TAR	$@"
+	tar czf $@ $^
+
+%.tar.bz2:
+	@echo "   TAR	$@"
+	tar cjf $@ $^
 
 
 # Other miscellaneous rules
 .PHONY: remake
 remake: clean
-	make all
+	make
 
 # Used to force recompile if we change flags or makefiles.
 .PHONY: FORCE
 FORCE:
 
 flags: new_flags FORCE
-	@echo "  FLAGS"
 	@{ test -f $@ && diff -q $@ $< >/dev/null; } || \
 	{ echo "Flags and makefiles changed; remaking."; cp $< $@; }
 	@rm new_flags
@@ -76,30 +74,30 @@ new_flags:
 .PHONY: install uninstall
 
 # header files to install
-HEADERS=slz.h
-
 install: $(LIBS) $(HEADERS)
-	@echo "  INSTALL"
+	@echo "   INSTALL"
 	install -m 644 $(LIBS) $(LIB)/
 	install -m 644 $(HEADERS) $(INCLUDE)/
 
 uninstall:
-	@echo "  UNINSTALL"
+	@echo "   UNINSTALL"
 	rm -f $(addprefix $(LIB)/,$(LIBS))
 	rm -f $(addprefix $(INCLUDE),$(HEADERS))
 
 
 # Cleaning stuff.
-.PHONY: depclean clean pristine
+CLEAN_RULES=nodeps clean pristine
+.PHONY: $(CLEAN_RULES)
 
-depclean:
+nodeps:
 	./depclean
 
 clean:
+	@echo "   CLEAN"
 	find . -name '*.o' -delete
-	rm -f $(LIBS) $(EXES)
+	rm -f $(LIBS) $(EXES) *.tar.gz *.tar.bz2
 
-pristine: clean depclean
+pristine: clean nodeps
 	rm -f flags new_flags
 
 
@@ -109,14 +107,16 @@ pristine: clean depclean
 $(shell find . -name '*.dep' -empty -print0 | xargs -0 rm -f)
 
 %.dep: %.c flags
-	@echo "  DEP	$<"
-	@set -e; $(CC) -MM -MT $< $(filter-out -pedantic,$(CFLAGS)) $< |\
+	@echo "   DEP	$<"
+	set -e; $(CC) -MM -MT $< $(filter-out -pedantic,$(CFLAGS)) $< |\
 	sed 's,\($*\)\.c *:,\1.o $@ :,' > $@
 
 CFILES=$(shell find . -name '*.c')
 
-# Only include dep files if not cleaning.
-ifneq (,$(filter-out depclean clean pristine, $(MAKECMDGOALS)))
+# Only include dep files in certain circumstances.
+NODEP_RULES=$(CLEAN_RULES) slz.tar.%
+
+ifneq (,$(filter-out $(NODEP_RULES), $(MAKECMDGOALS)))
 include $(CFILES:.c=.dep)
 else ifeq (,$(MAKECMDGOALS))
 include $(CFILES:.c=.dep)

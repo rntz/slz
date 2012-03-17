@@ -1,4 +1,4 @@
-#include "slz.h"
+#include <slz.h>
 
 #include <stdlib.h>
 #include <string.h>
