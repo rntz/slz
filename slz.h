@@ -128,7 +128,7 @@ void slz_perror(slz_ctx_t *ctx, const char *s);
  *
  * Note how the catch comes /before/ the code that can cause the error.
  */
-#define slz_catch(ctx) ((bool) (setjmp(slz_PRIVATE_pre_catch((ctx))->jmp_buf)))
+#define slz_catch(ctx) ((bool) (setjmp(slz_PRIVATE_pre_catch((ctx))->env)))
 void slz_end_catch(slz_ctx_t *ctx);
 
 /* INTERNAL FUNCTION DO NOT USE.  */
