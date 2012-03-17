@@ -131,7 +131,7 @@ void slz_end_catch(slz_ctx_t *ctx);
 
 /* INTERNAL FUNCTION DO NOT USE.  */
 static inline slz_ctx_t *slz_PRIVATE_pre_catch(slz_ctx_t *ctx) {
-    assert (!slz_has_error(ctx) && !ctx->have_env);
+    assert (!slz_error(ctx) && !ctx->have_env);
     ctx->have_env = true;
     return ctx;
 }
