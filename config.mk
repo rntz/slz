@@ -1,8 +1,11 @@
-# Defaults.
+# Variables affecting installation.
+PREFIX=/usr/local
+
+# Variables affecting compilation.
 CC=gcc
 CCLD=$(CC)
 AR=ar
-CFLAGS+= -std=c99 -Wall -Wextra -Werror -pipe
+CFLAGS+= -std=c99 -pedantic -Wall -Wextra -Werror -pipe
 LDFLAGS+=
 
 CFLAGS_DEBUG= -O0 -ggdb3
@@ -30,7 +33,3 @@ endif
 # NB. Compiling with clang gives nicer compilation error messages, but forfeits
 # the ability to use macros from gdb.
 #CC=clang
-
-
-# Just for fun, if you want to see the various ways I'm violating the c99 spec.
-#CFLAGS+= -pedantic -Wno-error
