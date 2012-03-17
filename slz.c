@@ -12,7 +12,8 @@
  */
 static const char magic[] = "slz-";
 
-#define S(x) #x
+#define S2(x) #x
+#define S(x) S2(x)
 #define ID(x) x          /* this is here to make emacs' auto indentation work */
 static const char version_string[] =
     ID(S(SLZ_VERSION_MAJOR) "." S(SLZ_VERSION_MINOR) "." S(SLZ_VERSION_BUGFIX));
@@ -157,7 +158,7 @@ static void expect_header(slz_ctx_t *ctx, slz_src_t *src)
 {
     char c;
     uint16_t major = 0, minor = 0, bugfix = 0;
-    if (!(try_expect_bytes(ctx, src, sizeof magic, magic) &&
+    if (!(try_expect_bytes(ctx, src, strlen(magic), magic) &&
           get_version_frag(ctx, src, &major, &c) && c == '.' &&
           get_version_frag(ctx, src, &minor, &c) && c == '.' &&
           get_version_frag(ctx, src, &bugfix, &c) && c == '\0')) {
@@ -195,9 +196,9 @@ static inline size_t asciilen(uint16_t num)
 static void slz_put_header(slz_ctx_t *ctx, slz_sink_t *sink)
 {
     /* Write magic number & version info. */
-    slz_put_bytes(ctx, sink, sizeof magic, magic);
-    /* + 1 to include the terminating null byte. */
-    slz_put_bytes(ctx, sink, sizeof version_string + 1, version_string);
+    slz_put_bytes(ctx, sink, strlen(magic), magic);
+    /* sizeof rather than strlen to include the terminating null byte. */
+    slz_put_bytes(ctx, sink, sizeof version_string, version_string);
 }
 
 void slz_sink_from_file(slz_ctx_t *ctx, slz_sink_t *sink, FILE *file)
@@ -389,7 +390,7 @@ uint32_t slz_get_uint32(slz_ctx_t *ctx, slz_src_t *src)
     return (hi << 16) + lo;
 }
 
-int32_t slz_get_int2(slz_ctx_t *ctx, slz_src_t *src) {
+int32_t slz_get_int32(slz_ctx_t *ctx, slz_src_t *src) {
     return (int32_t) slz_get_uint32(ctx, src);
 }
 
