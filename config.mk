@@ -9,7 +9,7 @@ CFLAGS+= -std=c99 -pedantic -Wall -Wextra -Werror -pipe
 LDFLAGS+=
 
 CFLAGS_DEBUG= -O0 -ggdb3
-CFLAGS_RELEASE= -O3 -fomit-frame-pointer -DNDEBUG -DSLZ_RELEASE
+CFLAGS_RELEASE= -O2 -DNDEBUG -DSLZ_RELEASE
 # feel free to mess around with this.
 CFLAGS_CUSTOM=
 
