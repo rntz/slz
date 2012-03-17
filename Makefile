@@ -28,6 +28,7 @@ else
 	$(AR) rcD $@ $^
 endif
 
+
 # Other miscellaneous rules
 .PHONY: remake
 remake: clean
@@ -43,7 +44,9 @@ flags: new_flags FORCE
 new_flags:
 	@echo CC="$(CC)" > $@
 	@echo CFLAGS="$(CFLAGS)" >> $@
+	@echo CCLD="$(CCLD)" >> $@
 	@echo LDFLAGS="$(LDFLAGS)" >> $@
+	@echo AR="$(AR)" >> $@
 	@echo ARFLAGS="$(ARFLAGS)" >> $@
 	@md5sum Makefile config.mk >> $@
 
