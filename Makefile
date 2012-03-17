@@ -112,8 +112,7 @@ $(shell find . -name '*.dep' -empty -print0 | xargs -0 rm -f)
 	@set -e; $(CC) -MM -MT $< $(filter-out -pedantic,$(CFLAGS)) $< |\
 	sed 's,\($*\)\.c *:,\1.o $@ :,' > $@
 
-#CFILES=$(shell find . -name '*.c')
-CFILES=slz.c
+CFILES=$(shell find . -name '*.c')
 
 # Only include dep files if not cleaning.
 ifneq (,$(filter-out depclean clean pristine, $(MAKECMDGOALS)))
