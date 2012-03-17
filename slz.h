@@ -7,111 +7,167 @@
 #include <stdint.h>
 #include <stdio.h>
 
-typedef struct slz_src slz_src_t;
-typedef struct slz_sink slz_sink_t;
-typedef struct slz_err slz_err_t;
+/* NB. The rest of this comment is a collection of lies, serving as an extended
+ * TODO. Currently, if the version of the library and the encoded value do not
+ * match, an error occurs. (YAGNI.)
+ *
+ * TODO:
+ *
+ * Consider a library with version "ml.il.bl" (format: "major.minor.bugfix").
+ * Suppose it is attempting to read a chunk serialized by library with version
+ * "sml.sil.sbl".
+ *
+ * If ml != sml, an error occurs. Major version changes indicate complete
+ * incompatibilities. Otherwise:
+ *
+ * If il < sil, then a "soft" error occurs. Minor version increments indicate
+ * new features which an older library may not be able to handle. However, the
+ * library can be forced to try anyway, as it may succeed if the new minor
+ * version's features were not exercised; hence, a "soft" error.
+ *
+ * Otherwise, everything is OK, unless "sml.sil.sbl" is known to have buggy
+ * serialization, in which case a "soft" error is signalled.
+ *
+ * See slz_src_from_file and slz_sink_from_file for information about how errors
+ * are signalled.
+ */
+
+#define SLZ_VERSION_MAJOR  0
+#define SLZ_VERSION_MINOR  0
+#define SLZ_VERSION_BUGFIX 0
+
+typedef struct { uint16_t major, minor, bugfix; } slz_version_t;
+
+typedef enum { SLZ_SRC_FILE } slz_src_type_t;
+typedef enum { SLZ_SINK_FILE } slz_sink_type_t;
+
+typedef struct {
+    uint8_t type;               /* slz_src_type_t */
+    bool error;
+    union { FILE *file; } src;
+} slz_src_t;
+
+typedef struct {
+    uint8_t type;               /* slz_sink_type_t */
+    bool error;
+    union { FILE *file; } sink;
+} slz_sink_t;
 
 /* Types of errors that can occur. */
 typedef enum {
     SLZ_NO_ERROR,
-    SLZ_ERRNO,
     SLZ_UNKNOWN_ERROR,
-} slz_errstate_t;
+    SLZ_ERRNO,
+    SLZ_VERSION_MISMATCH,
+    SLZ_BAD_MAGIC_NUMBER,
+} slz_state_t;
 
-struct slz_err {
-    uint8_t state;              /* one of the above enum values. */
+typedef enum { SLZ_SRC, SLZ_SINK } slz_origin_t;
+
+typedef struct slz_ctx slz_ctx_t;
+struct slz_ctx {
+    uint8_t state;        /* slz_state_t */
+    uint8_t origin_type;  /* slz_origin_t */
     bool have_env;
     union {
         int saved_errno;
-    } data;
+        slz_version_t version;
+    } info;
+    union {
+        slz_src_t *src;
+        slz_sink_t *sink;
+    } origin;
     jmp_buf env;
+    /* if this returns, we abort the program. */
+    void (*toplevel_error_handler)(slz_ctx_t *ctx, void *userdata);
+    void *userdata;
 };
 
-struct slz_src {
-    enum { SLZ_SRC_FILE } type;
-    slz_err_t err;
-    union {
-        FILE *file;
-    } src;
-};
-
-struct slz_sink {
-    enum { SLZ_SINK_FILE } type;
-    slz_err_t err;
-    union {
-        FILE *file;
-    } sink;
-};
+
+/* Miscellany. */
+slz_version_t slz_version(void);
 
 
 /* Error handling. */
-static inline bool slz_has_error(slz_err_t *err) {
-    return err->state != SLZ_NO_ERROR;
+void slz_init(
+    slz_ctx_t *ctx,
+    void (*handler)(slz_ctx_t*, void*),
+    void *userdata);
+
+/* Initializes `ctx' with a top-level error handler that prints the error,
+ * perror-style (using `s'), and then aborts. */
+void slz_init_with_perror(slz_ctx_t *ctx, const char *s);
+
+static inline bool slz_error(slz_ctx_t *ctx) {
+    return ctx->state != SLZ_NO_ERROR;
 }
 
-static inline slz_err_t *slz_src_err(slz_src_t *src) { return &src->err; }
-static inline slz_err_t *slz_sink_err(slz_sink_t *sink) { return &sink->err; }
-
-/* Precondition: slz_has_error(err). */
-void slz_perror(const char *s, slz_err_t *err);
+/* Precondition: slz_error(ctx).
+ * NB. doesn't clear the error from src or sink that caused it.
+ */
+void slz_clear_error(slz_ctx_t *ctx);
+/* Precondition: slz_error(ctx). */
+void slz_perror(slz_ctx_t *ctx, const char *s);
 
 /* Example use:
  *
- *     slz_src_t *src = ...;
- *
- *     if (slz_catch_src(src)) {
+ *     slz_ctx_t ctx;
+ *     slz_src_t src;
+ *     ...
+ *     if (slz_catch(&ctx)) {
  *         // An error occurred.
- *         slz_perror("myprog", slz_src_err(src));
+ *         slz_perror(&ctx, "myprog");
  *         exit(1);
  *     }
  *     // This is the code that can cause an error.
- *     int32_t val;
- *     slz_read_int32(src, &val);
+ *     int32_t val = slz_read_int32(&ctx, &src);
  *     ...
+ *     slz_end_catch(&ctx);
  *
  * Note how the catch comes /before/ the code that can cause the error.
  */
+#define slz_catch(ctx) ((bool) (setjmp(slz_PRIVATE_pre_catch((ctx))->jmp_buf)))
+void slz_end_catch(slz_ctx_t *ctx);
 
-#define slz_catch(err) \
-    (assert(!slz_has_error(err) && !(err)->have_env),   \
-     (err)->have_env = true,                            \
-     (bool) setjmp((err)->jmp_buf, 0))
-
-#define slz_catch_src(src) slz_catch(slz_src_err(src))
-#define slz_catch_sink(sink) slz_catch(slz_sink_err(sink))
+/* INTERNAL FUNCTION DO NOT USE.  */
+static inline slz_ctx_t *slz_PRIVATE_pre_catch(slz_ctx_t *ctx) {
+    assert (!slz_has_error(ctx) && !ctx->have_env);
+    ctx->have_env = true;
+    return ctx;
+}
 
 
 /* Sources & sinks. */
-void slz_src_from_file(slz_src_t *src, FILE *file);
-void slz_sink_from_file(slz_sink_t *sink, FILE *file);
+void slz_src_from_file(slz_ctx_t *ctx, slz_src_t *src, FILE *file);
+void slz_sink_from_file(slz_ctx_t *ctx, slz_sink_t *sink, FILE *file);
 
 
 /* Serialization. */
-void slz_put_bytes(slz_sink_t *sink, size_t len, char *data);
+void slz_put_bytes(slz_ctx_t *ctx, slz_sink_t *sink, size_t len, char *data);
 
-void slz_put_bool  (slz_sink_t *sink,     bool val);
-void slz_put_uint8 (slz_sink_t *sink,  uint8_t val);
-void slz_put_int8  (slz_sink_t *sink,   int8_t val);
-void slz_put_uint16(slz_sink_t *sink, uint16_t val);
-void slz_put_int16 (slz_sink_t *sink,  int16_t val);
-void slz_put_uint32(slz_sink_t *sink, uint32_t val);
-void slz_put_int32 (slz_sink_t *sink,  int32_t val);
-void slz_put_uint64(slz_sink_t *sink, uint64_t val);
-void slz_put_int64 (slz_sink_t *sink,  int64_t val);
+void slz_put_bool  (slz_ctx_t *ctx, slz_sink_t *sink,     bool val);
+void slz_put_uint8 (slz_ctx_t *ctx, slz_sink_t *sink,  uint8_t val);
+void slz_put_int8  (slz_ctx_t *ctx, slz_sink_t *sink,   int8_t val);
+void slz_put_uint16(slz_ctx_t *ctx, slz_sink_t *sink, uint16_t val);
+void slz_put_int16 (slz_ctx_t *ctx, slz_sink_t *sink,  int16_t val);
+void slz_put_uint32(slz_ctx_t *ctx, slz_sink_t *sink, uint32_t val);
+void slz_put_int32 (slz_ctx_t *ctx, slz_sink_t *sink,  int32_t val);
+void slz_put_uint64(slz_ctx_t *ctx, slz_sink_t *sink, uint64_t val);
+void slz_put_int64 (slz_ctx_t *ctx, slz_sink_t *sink,  int64_t val);
 
 
 /* Deserialization. */
-void slz_get_bytes(slz_src_t *src, size_t len, char *out);
+void slz_get_bytes(slz_ctx_t *ctx, slz_src_t *src, size_t len, char *out);
 
-    bool slz_get_bool  (slz_src_t *src);
- uint8_t slz_get_uint8 (slz_src_t *src);
-  int8_t slz_get_int8  (slz_src_t *src);
-uint16_t slz_get_uint16(slz_src_t *src);
- int16_t slz_get_int16 (slz_src_t *src);
-uint32_t slz_get_uint32(slz_src_t *src);
- int32_t slz_get_int32 (slz_src_t *src);
-uint64_t slz_get_uint64(slz_src_t *src);
- int64_t slz_get_int64 (slz_src_t *src);
+    bool slz_get_bool  (slz_ctx_t *ctx, slz_src_t *src);
+ uint8_t slz_get_uint8 (slz_ctx_t *ctx, slz_src_t *src);
+  int8_t slz_get_int8  (slz_ctx_t *ctx, slz_src_t *src);
+uint16_t slz_get_uint16(slz_ctx_t *ctx, slz_src_t *src);
+ int16_t slz_get_int16 (slz_ctx_t *ctx, slz_src_t *src);
+uint32_t slz_get_uint32(slz_ctx_t *ctx, slz_src_t *src);
+ int32_t slz_get_int32 (slz_ctx_t *ctx, slz_src_t *src);
+uint64_t slz_get_uint64(slz_ctx_t *ctx, slz_src_t *src);
+ int64_t slz_get_int64 (slz_ctx_t *ctx, slz_src_t *src);
 
 /* /\* Reads a C string of arbitrary length, allocating a buffer for it using
  *  * malloc() and putting it in `*out'. *\/
