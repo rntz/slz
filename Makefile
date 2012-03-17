@@ -22,8 +22,12 @@ libslz.a: $(SOURCES:.c=.o)
 include config.mk
 
 # Tarballs.
-slz.tar.gz: $(TAR_FILES)
-slz.tar.bz2: $(TAR_FILES)
+TARNAME=slz-$(VERSION_MAJOR).$(VERSION_MINOR).$(VERSION_BUGFIX)
+$(TARNAME).tar.gz $(TARNAME).tar.bz2: $(TAR_FILES)
+
+.PHONY: tar.gz tar.bz2
+tar.gz: $(TARNAME).tar.gz
+tar.bz2: $(TARNAME).tar.bz2
 
 # Examples.
 .PHONY: examples
@@ -49,11 +53,15 @@ $(EXES): %:
 
 %.tar.gz:
 	@echo "   TAR	$@"
-	tar czf $@ $^
+	ln -sf ./ $*
+	tar czf $@ $(addprefix $*/,$^)
+	rm $*
 
 %.tar.bz2:
 	@echo "   TAR	$@"
-	tar cjf $@ $^
+	ln -sf ./ $*
+	tar cjf $@ $(addprefix $*/,$^)
+	rm $*
 
 
 # Used to force recompile if we change flags or makefiles.
@@ -97,9 +105,8 @@ nodeps:
 	./depclean
 
 clean:
-	@echo "   CLEAN"
 	find . -name '*.o' -delete
-	rm -f $(LIBS) $(EXES) slz.tar.*
+	rm -f $(LIBS) $(EXES) slz-*.tar.*
 
 pristine: clean nodeps
 	rm -f flags new_flags
@@ -118,7 +125,7 @@ $(shell find . -name '*.dep' -empty -print0 | xargs -0 rm -f)
 CFILES=$(shell find . -name '*.c')
 
 # Only include dep files in certain circumstances.
-NODEP_RULES=$(CLEAN_RULES) slz.tar.% uninstall
+NODEP_RULES=$(CLEAN_RULES) $(TARNAME).tar.% tar.% uninstall
 
 ifneq (,$(filter-out $(NODEP_RULES), $(MAKECMDGOALS)))
 include $(CFILES:.c=.dep)
