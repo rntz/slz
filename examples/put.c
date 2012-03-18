@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* We serialize argv[1..] to the file argv[0]. */
+/* We serialize argv to stdout. */
 int main(int argc, char **argv)
 {
     if (argc < 1) {             /* never happens */
