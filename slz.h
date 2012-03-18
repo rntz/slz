@@ -115,7 +115,7 @@ void slz_perror(slz_ctx_t *ctx, const char *s);
  *
  *     slz_ctx_t ctx;
  *     slz_src_t src;
- *     ...
+ *     ... // initialize ctx, src
  *     if (slz_catch(&ctx)) {
  *         // An error occurred.
  *         slz_perror(&ctx, "myprog");
