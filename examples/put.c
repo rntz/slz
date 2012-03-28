@@ -23,6 +23,7 @@ int main(int argc, char **argv)
 
     slz_sink_t sink;
     slz_sink_from_file(&ctx, &sink, stdout);
+    slz_put_magic(&ctx, &sink);
 
     /* Serialize to the file. */
     assert (sizeof(int) <= sizeof(int32_t));

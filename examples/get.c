@@ -40,6 +40,7 @@ int main(int argc, char **argv)
 
     slz_src_t src;
     slz_src_from_file(&ctx, &src, f);
+    slz_expect_magic(&ctx, &src);
 
     /* Deserialize from file. */
     int nstrs = (int) slz_get_int32(&ctx, &src);
