@@ -34,7 +34,7 @@ tar.bz2: $(TARNAME).tar.bz2
 examples: $(EXAMPLES)
 $(EXAMPLES): %: %.o $(LIBS)
 # Examples need `#include <slz.h>' to work
-$(EXAMPLES): CFLAGS+=-I./
+$(EXAMPLES) $(addsuffix .dep,$(EXAMPLES)): CFLAGS+=-I./
 
 
 # Pattern rules
